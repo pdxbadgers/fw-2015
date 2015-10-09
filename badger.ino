@@ -34,6 +34,7 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#include <stdint.h>
 
 #define TAIL_LED       0  //led 0
 #define BACK_FOOT_LED  16 //led 1
@@ -66,6 +67,30 @@ void handleFlag()
     }
 
   server.send(200, "text/html",flag);
+}
+
+void handleRGB()
+{
+  //format is
+  //rgb?r={value}&g={value}&b={value}
+  static uint8_t rgb[3];
+  if (server.hasArg("r") && server.hasArg("g") && server.hasArg("b")) {
+    //write
+    rgb[0] = server.arg("r").toInt();
+    rgb[1] = server.arg("g").toInt();
+    rgb[2] = server.arg("b").toInt();
+    analogWrite(EYE_R, rgb[0]);
+    analogWrite(EYE_G, rgb[1]);
+    analogWrite(EYE_B, rgb[2]);
+  }
+  String response;
+  response += rgb[0];
+  response += ", ";
+  response += rgb[1];
+  response += ", ";
+  response += rgb[2];
+
+  server.send(200, "text/html", response);
 }
 
 void handleBlink()
@@ -262,6 +287,7 @@ void setup()
   server.on("/", handleRoot);
   server.on("/flag", handleFlag);
   server.on("/blink", handleBlink);
+  server.on("/rgb", handleRGB);
 
   server.on("/update", HTTP_POST, [](){
       server.sendHeader("Connection", "close");
