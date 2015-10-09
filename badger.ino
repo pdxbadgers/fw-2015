@@ -35,6 +35,15 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 
+#define TAIL_LED       0  //led 0
+#define BACK_FOOT_LED  16 //led 1
+#define FRONT_FOOT_LED 14 //led 2
+#define NOSE_LED       5  //led 3
+
+#define EYE_R          13
+#define EYE_G          12
+#define EYE_B          15
+
 /* Set these to your desired credentials. */
 char ssid[60] = "BadgerNet";
 ESP8266WebServer server(80);
@@ -61,10 +70,53 @@ void handleFlag()
 
 void handleBlink()
 {
-  String device=server.arg("d");
-  String state=server.arg("s");
+  //format is
+  //blink?d={0,1,2,3}&v={value}
+  //blink?d={0,1,2,3}
+  static bool values[4];
 
-  server.send(200, "text/html", "setting LED s= "+state+"  d="+device);
+  if (!server.hasArg("d")) {
+    server.send(400, "text/html", "d={1..3}");
+    return;
+  }
+
+  int led = (server.arg("d")).toInt();
+  if (led < 0 || led > 3) {
+    server.send(400, "text/html", "d={1..3}");
+    return;
+  }
+
+  if (server.hasArg("v")) {
+    //is a write
+    int value = HIGH;
+
+    if (server.arg("v") == "0") {
+      value = LOW;
+    }
+
+    values[led] = value;
+    switch(led) {
+    case 0:
+      digitalWrite(TAIL_LED, value);
+      break;
+
+    case 1:
+      digitalWrite(BACK_FOOT_LED, value);
+      break;
+
+    case 2:
+      digitalWrite(FRONT_FOOT_LED, value);
+      break;
+
+    case 3:
+      digitalWrite(NOSE_LED, value);
+      break;
+
+    default:
+      break;
+    }
+  }
+  server.send(200, "text/html", values[led] ? "1" : "0");
 }
 
 void setupWiFi()
@@ -196,6 +248,14 @@ void setup()
   delay(1000);
   Serial.begin(115200);
   Serial.println();
+
+  pinMode(TAIL_LED, OUTPUT);
+  pinMode(BACK_FOOT_LED, OUTPUT);
+  pinMode(FRONT_FOOT_LED, OUTPUT);
+  pinMode(NOSE_LED, OUTPUT);
+  pinMode(EYE_R, OUTPUT);
+  pinMode(EYE_G, OUTPUT);
+  pinMode(EYE_B, OUTPUT);
 
   setupWiFi();
 
