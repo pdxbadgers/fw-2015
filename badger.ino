@@ -56,7 +56,9 @@ const char* serverIndex = "<form method='POST' action='/update' enctype='multipa
 
 void handleRoot()
 {
-  server.send(200, "text/html", "<h1>You are connected</h1>");
+  String html = "<h1>You are connected</h1>";
+  html =+ serverIndex;
+  server.send(200, "text/html", html);
 }
 
 void handleFlag()
@@ -90,6 +92,7 @@ void handleRGB()
   response += ", ";
   response += rgb[2];
 
+  server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "text/html", response);
 }
 
@@ -141,6 +144,7 @@ void handleBlink()
       break;
     }
   }
+  server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "text/html", values[led] ? "1" : "0");
 }
 
