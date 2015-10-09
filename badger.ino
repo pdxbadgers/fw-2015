@@ -144,7 +144,7 @@ void setupWiFi()
 
   if(WiFi.status()!=WL_CONNECTED) // uh oh .. BadgerNet isn't there, is someone else running one?
     {
-      Serial.println("Looking for more badgers..");
+      Serial.println(F("Looking for more badgers.."));
       int n = WiFi.scanNetworks();
       for (int i = 0; i < n; ++i)
         {
@@ -153,28 +153,28 @@ void setupWiFi()
           string_ssid.toCharArray(this_ssid,60);
           if(string_ssid.startsWith("BadgerNet"))
             {
-              Serial.print("Trying to connect to ");
+              Serial.print(F("Trying to connect to "));
               Serial.println(this_ssid);
               WiFi.begin(this_ssid);
               if(WiFi.waitForConnectResult()==WL_CONNECTED)
                 {
                   online=1;
-                  Serial.print("Connected to ");
+                  Serial.print(F("Connected to "));
                   Serial.println(this_ssid);
 
-                  Serial.print("IP address: ");
+                  Serial.print(F("IP address: "));
                   Serial.println(WiFi.localIP());
                   break; // break out of the for loop
                 }
               else
                 {
-                  Serial.print("Could not connect to ");
+                  Serial.print(F("Could not connect to "));
                   Serial.println(this_ssid);
                 }
             }
           else
             {
-              Serial.print("I don't care about ");
+              Serial.print(F("I don't care about "));
               Serial.println(WiFi.SSID(i));
             }
           delay(10);
@@ -194,14 +194,14 @@ void setupWiFi()
       if(1) // best check ever
         {
           online=1;
-          Serial.print("Fine, I'll make my own AP at ");
+          Serial.print(F("Fine, I'll make my own AP at "));
           Serial.println(ssid);
-          Serial.print("AP IP address: ");
+          Serial.print(F("AP IP address: "));
           Serial.println(WiFi.softAPIP());
         }
       else
         {
-          Serial.println("Couldn't even set up my own network, what gives?");
+          Serial.println(F("Couldn't even set up my own network, what gives?"));
         }
     }
 }
@@ -274,7 +274,7 @@ void setup()
 
   server.begin();
 
-  Serial.println("HTTP server started");
+  Serial.println(F("HTTP server started"));
 }
 
 void loop() {
