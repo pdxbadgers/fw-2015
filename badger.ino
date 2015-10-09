@@ -42,8 +42,8 @@
 #define NOSE_LED       5  //led 3
 
 #define EYE_R          13
-#define EYE_G          12
-#define EYE_B          15
+#define EYE_G          15
+#define EYE_B          12
 
 /* Set these to your desired credentials. */
 char ssid[60] = "BadgerNet";
