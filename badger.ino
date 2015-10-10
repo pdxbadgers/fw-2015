@@ -36,6 +36,12 @@
 #include <ESP8266mDNS.h>
 #include <stdint.h>
 
+//something funny about arduino is that it seems to parse your .ino
+//file for #include to see what to set the include path to
+#include <EEPROM.h>
+
+#include "configspace.h"
+
 #define TAIL_LED       0  //led 0
 #define BACK_FOOT_LED  16 //led 1
 #define FRONT_FOOT_LED 14 //led 2
@@ -146,6 +152,38 @@ void handleBlink()
   }
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "text/html", values[led] ? "1" : "0");
+}
+
+void handleConfig()
+{
+  if (server.hasArg("n")) {
+    //set the name
+    const String name = server.arg("n");
+    configSpace.setName(server.arg("n"));
+  }
+  if (server.hasArg("s")) {
+    //set speaker
+    bool value = false;
+    if (server.arg("s") == "1") {
+      value = true;
+    }
+    configSpace.setSpeaker(value);
+  }
+
+  String content;
+  content.reserve(3+configSpace.nameLen()+1);
+  if (configSpace.speaker()) {
+    content += "1";
+  } else {
+    content += "0";
+  }
+  content += ",";
+  {
+    //delete returned string prior to sending it with server
+    content += configSpace.name();
+  }
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "text/html", content);
 }
 
 void setupWiFi()
@@ -286,12 +324,15 @@ void setup()
   pinMode(EYE_G, OUTPUT);
   pinMode(EYE_B, OUTPUT);
 
+  configSpace.begin();
+
   setupWiFi();
 
   server.on("/", handleRoot);
   server.on("/flag", handleFlag);
   server.on("/blink", handleBlink);
   server.on("/rgb", handleRGB);
+  server.on("/config", handleConfig);
 
   server.on("/update", HTTP_POST, [](){
       server.sendHeader("Connection", "close");
