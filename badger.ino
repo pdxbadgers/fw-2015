@@ -107,7 +107,7 @@ void handleBlink()
   //format is
   //blink?d={0,1,2,3}&v={value}
   //blink?d={0,1,2,3}
-  static bool values[4];
+  static uint16_t values[4];
 
   if (!server.hasArg("d")) {
     server.send(400, "text/html", "d={1..3}");
@@ -122,28 +122,24 @@ void handleBlink()
 
   if (server.hasArg("v")) {
     //is a write
-    int value = HIGH;
-
-    if (server.arg("v") == "0") {
-      value = LOW;
-    }
+    int value = std::min(1023L, server.arg("v").toInt());
 
     values[led] = value;
     switch(led) {
     case 0:
-      digitalWrite(TAIL_LED, value);
+      analogWrite(TAIL_LED, value);
       break;
 
     case 1:
-      digitalWrite(BACK_FOOT_LED, value);
+      analogWrite(BACK_FOOT_LED, value);
       break;
 
     case 2:
-      digitalWrite(FRONT_FOOT_LED, value);
+      analogWrite(FRONT_FOOT_LED, value);
       break;
 
     case 3:
-      digitalWrite(NOSE_LED, value);
+      analogWrite(NOSE_LED, value);
       break;
 
     default:
@@ -151,7 +147,7 @@ void handleBlink()
     }
   }
   server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/html", values[led] ? "1" : "0");
+  server.send(200, "text/html", String(values[led]));
 }
 
 void handleConfig()
