@@ -146,7 +146,6 @@ void handleBlink()
       break;
     }
   }
-  server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "text/html", String(values[led]));
 }
 
@@ -178,7 +177,6 @@ void handleConfig()
     //delete returned string prior to sending it with server
     content += configSpace.name();
   }
-  server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "text/html", content);
 }
 
