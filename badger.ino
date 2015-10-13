@@ -40,6 +40,8 @@
 //file for #include to see what to set the include path to
 #include <EEPROM.h>
 
+#include <Ticker.h>
+#include "leds.h"
 #include "configspace.h"
 
 #define TAIL_LED       0  //led 0
@@ -50,6 +52,23 @@
 #define EYE_R          13
 #define EYE_G          15
 #define EYE_B          12
+
+
+MonochromeLED tailLED(TAIL_LED);
+MonochromeLED backFootLED(BACK_FOOT_LED);
+MonochromeLED frontFootLED(FRONT_FOOT_LED);
+MonochromeLED noseLED(NOSE_LED);
+RgbLED eyeLED(EYE_R, EYE_G, EYE_B);
+
+LED* _led_array[] = { &tailLED, &backFootLED, &frontFootLED, &noseLED, &eyeLED };
+#define NUM_LEDS ( sizeof(_led_array) / sizeof(LED*) )
+
+
+LEDGroup leds(_led_array, NUM_LEDS, [](){ leds.modeStep(); });
+
+void ledGroupModeGlue() {
+  leds.modeStep();
+}
 
 /* Set these to your desired credentials. */
 char ssid[60] = "BadgerNet";
@@ -77,76 +96,107 @@ void handleFlag()
   server.send(200, "text/html",flag);
 }
 
-void handleRGB()
-{
-  //format is
-  //rgb?r={value}&g={value}&b={value}
-  static uint8_t rgb[3];
-  if (server.hasArg("r") && server.hasArg("g") && server.hasArg("b")) {
-    //write
-    rgb[0] = server.arg("r").toInt();
-    rgb[1] = server.arg("g").toInt();
-    rgb[2] = server.arg("b").toInt();
-    analogWrite(EYE_R, rgb[0]);
-    analogWrite(EYE_G, rgb[1]);
-    analogWrite(EYE_B, rgb[2]);
-  }
-  String response;
-  response += rgb[0];
-  response += ", ";
-  response += rgb[1];
-  response += ", ";
-  response += rgb[2];
+// GET /leds -> JSON describing LED set
+// GET /leds/ -> JSON describing all LEDs
+// GET /leds?d=<id> -> equiv GET /leds/<id>
+// GET /leds?d=<id>&s=<state> -> equiv PATCH /leds/<id> {"state": <state>}
+// GET /leds?d=<id>&r=<red>&g=<green>&b=<blue> -> equiv PATCH /leds/<id> {"r": <red>, "g": <green>, "b": <blue>}
+// GET /leds?d=<id>&s=<state>&r=<red>&g=<green>&b=<blue> -> equiv PUT /leds/<id> {"state": <state>, "r": <red>, "g": <green>, "b": <blue>}
+// GET /leds?m=<mode> -> equiv PATCH /leds {"mode": <mode>}
+//    <mode> is one of:
+//      blink: all LEDs flash
+//      chase: two LEDs will chase across the badger
+//      twinkle: random, overlapping blink
+//      none: all LEDs off
+void handleLeds() {
+  Serial.println("handleLeds()");
+  String uri = server.uri();
 
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.send(200, "text/html", response);
-}
-
-void handleBlink()
-{
-  //format is
-  //blink?d={0,1,2,3}&v={value}
-  //blink?d={0,1,2,3}
-  static uint16_t values[4];
-
-  if (!server.hasArg("d")) {
-    server.send(400, "text/html", "d={1..3}");
-    return;
-  }
-
-  int led = (server.arg("d")).toInt();
-  if (led < 0 || led > 3) {
-    server.send(400, "text/html", "d={1..3}");
-    return;
-  }
-
-  if (server.hasArg("v")) {
-    //is a write
-    int value = std::min(1023L, server.arg("v").toInt());
-
-    values[led] = value;
-    switch(led) {
-    case 0:
-      analogWrite(TAIL_LED, value);
-      break;
-
-    case 1:
-      analogWrite(BACK_FOOT_LED, value);
-      break;
-
-    case 2:
-      analogWrite(FRONT_FOOT_LED, value);
-      break;
-
-    case 3:
-      analogWrite(NOSE_LED, value);
-      break;
-
-    default:
-      break;
+  if (uri[uri.length() - 1] == '/') {
+    // Enumerate LEDs
+    if (server.args() != 0) {
+      sendError(400, "too many parameters");
+      return;
     }
+
+    server.send(200, "text/json", leds.getGroupEnumeration());    
   }
-  server.send(200, "text/html", String(values[led]));
+  else if (server.args() == 0) {
+    //LEDs collection info
+    server.send(200, "text/json", leds.getGroupInfo());
+  }
+  else if (server.hasArg("m")) {
+    if (server.args() > 1) {
+      sendError(400, "setting mode has no additional parameters");
+      return;      
+    }
+
+    if (!leds.setMode(server.arg("m"))) {
+      sendError(400, "unknown mode");
+      return;
+    }
+
+    server.send(200, "text/json", leds.getGroupInfo());    
+  }
+  else if (server.hasArg("d")) {
+    Serial.println("d=");
+    int expectedParams = 1;
+
+    int ledID = server.arg("d").toInt();
+    if (ledID < 0 || ledID >= NUM_LEDS) {
+      sendError(404, "no LED with requested id");
+      return;
+    }
+    Serial.print("device id: ");
+    Serial.println(ledID);
+    
+    boolean setNewState = false;
+    boolean newState = false;
+    if (server.hasArg("s")) {
+      Serial.println("s=");
+      expectedParams++;
+      setNewState = true;
+      newState = (server.arg("s").toInt() != 0);
+      Serial.print("newState: ");
+      Serial.println(newState);
+    }
+    
+    boolean setRgb = false;
+    int newRed = 0, newGreen = 0, newBlue = 0;
+    if (server.hasArg("r") && server.hasArg("g") && server.hasArg("b")) {
+      Serial.println("rgb=");
+      if (!leds[ledID]->isRgb()) {
+        sendError(400, "requested LED is not color selectable");
+        return;
+      }
+      expectedParams += 3;
+      setRgb = true;
+      newRed = server.arg("r").toInt();
+      newGreen = server.arg("g").toInt();
+      newBlue = server.arg("b").toInt();
+      Serial.println("setting color");
+    }
+
+    if (server.args() != expectedParams) {
+      Serial.println("param count mismatch");
+      sendError(400, "unknown params");
+      return;
+    }
+
+    if (setRgb && !leds[ledID]->setColor(newRed, newGreen, newBlue)) {
+      Serial.println("error setting color");
+      sendError(400, "RGB set failed");
+      return;
+    }
+    if (setNewState) {
+      leds[ledID]->setState(newState);
+    }
+    server.send(200, "text/json", leds.getLedInfo(ledID));
+  }
+  else {
+    Serial.println("unknown led action");
+    sendError(404, "unknown action");
+  }
 }
 
 void handleConfig()
@@ -304,19 +354,17 @@ void handleFileUpload()
   yield();
 }
 
+void sendError(int code, const String& content) {
+  server.send(code, "text/plain", content);  
+}
+
 void setup()
 {
   delay(1000);
   Serial.begin(115200);
   Serial.println();
 
-  pinMode(TAIL_LED, OUTPUT);
-  pinMode(BACK_FOOT_LED, OUTPUT);
-  pinMode(FRONT_FOOT_LED, OUTPUT);
-  pinMode(NOSE_LED, OUTPUT);
-  pinMode(EYE_R, OUTPUT);
-  pinMode(EYE_G, OUTPUT);
-  pinMode(EYE_B, OUTPUT);
+  leds.setup();
 
   configSpace.begin();
 
@@ -324,8 +372,8 @@ void setup()
 
   server.on("/", handleRoot);
   server.on("/flag", handleFlag);
-  server.on("/blink", handleBlink);
-  server.on("/rgb", handleRGB);
+  server.on("/leds", handleLeds);
+  server.on("/leds/", handleLeds);  
   server.on("/config", handleConfig);
 
   server.on("/update", HTTP_POST, [](){
