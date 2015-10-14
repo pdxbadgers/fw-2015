@@ -39,10 +39,10 @@
 //something funny about arduino is that it seems to parse your .ino
 //file for #include to see what to set the include path to
 #include <EEPROM.h>
+#include "configspace.h"
 
 #include <Ticker.h>
 #include "leds.h"
-#include "configspace.h"
 
 #define TAIL_LED       0  //led 0
 #define BACK_FOOT_LED  16 //led 1
@@ -53,7 +53,6 @@
 #define EYE_G          15
 #define EYE_B          12
 
-
 MonochromeLED tailLED(TAIL_LED);
 MonochromeLED backFootLED(BACK_FOOT_LED);
 MonochromeLED frontFootLED(FRONT_FOOT_LED);
@@ -63,19 +62,16 @@ RgbLED eyeLED(EYE_R, EYE_G, EYE_B);
 LED* _led_array[] = { &tailLED, &backFootLED, &frontFootLED, &noseLED, &eyeLED };
 #define NUM_LEDS ( sizeof(_led_array) / sizeof(LED*) )
 
-
 LEDGroup leds(_led_array, NUM_LEDS, [](){ leds.modeStep(); });
 
-void ledGroupModeGlue() {
-  leds.modeStep();
-}
-
 /* Set these to your desired credentials. */
-char ssid[60] = "BadgerNet";
+#define PREFERRED_INFRASTRUCTURE_SSID "BadgerNet"
+#define WIFI_HOTSPOT_BASENAME         "BadgerNet"
+
+String myhostname = "none";
 ESP8266WebServer server(80);
 
-String flag="BADGERMASTER";
-String myhostname="none";
+String flag = "BADGERMASTER";
 
 const char* serverIndex = "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
 
@@ -86,14 +82,12 @@ void handleRoot()
   server.send(200, "text/html", html);
 }
 
-void handleFlag()
-{
-  if(server.hasArg("newflag"))
-    {
-      flag=server.arg("newflag");
-    }
+void handleFlag() {
+  if(server.hasArg("newflag")) {
+    flag = server.arg("newflag");
+  }
 
-  server.send(200, "text/html",flag);
+  server.send(200, "text/html", flag);
 }
 
 // GET /leds -> JSON describing LED set
@@ -215,106 +209,102 @@ void handleConfig()
     configSpace.setSpeaker(value);
   }
 
-  String content;
+  String content("{\"s\":");
   content.reserve(3+configSpace.nameLen()+1);
   if (configSpace.speaker()) {
     content += "1";
   } else {
     content += "0";
   }
-  content += ",";
+  content += ",\"n\":\"";
   {
     //delete returned string prior to sending it with server
     content += configSpace.name();
   }
+  content += "\"}";
   server.send(200, "text/html", content);
 }
 
-void setupWiFi()
-{
-  myhostname=WiFi.macAddress();
-  myhostname.replace(":","");
-  myhostname.toLowerCase();
+void setupWiFi() {
+  String macLastFour = WiFi.macAddress().substring(12,17);
+  macLastFour.replace(":","");
+  macLastFour.toLowerCase();
+
+  myhostname = configSpace.name();
+  Serial.print("name from config is ");
+  if (myhostname.length() == 0 || (myhostname.length() == 1 && myhostname[0] == 0)) {
+    myhostname = "badger";
+    myhostname += "-";
+    myhostname += macLastFour;
+  }
+  Serial.print("Hostname is ");
+  Serial.println(myhostname);
   WiFi.hostname(myhostname);
 
   Serial.println("Configuring access point...");
   bool online=0;
-  Serial.println("Trying to connect to BadgerNet");
-  WiFi.begin("BadgerNet");
-  if(WiFi.waitForConnectResult()==WL_CONNECTED)
-    {
-      online=1;
-      Serial.println("Connected to BadgerNet!");
-      Serial.print("IP address: ");
-      Serial.println(WiFi.localIP());
-    }
-  else
-    {
-      Serial.println("Couldn't find BadgerNet!");
-    }
 
-  if(WiFi.status()!=WL_CONNECTED) // uh oh .. BadgerNet isn't there, is someone else running one?
-    {
-      Serial.println(F("Looking for more badgers.."));
-      int n = WiFi.scanNetworks();
-      for (int i = 0; i < n; ++i)
-        {
-          char this_ssid[60];
-          String string_ssid=WiFi.SSID(i);
-          string_ssid.toCharArray(this_ssid,60);
-          if(string_ssid.startsWith("BadgerNet"))
-            {
-              Serial.print(F("Trying to connect to "));
-              Serial.println(this_ssid);
-              WiFi.begin(this_ssid);
-              if(WiFi.waitForConnectResult()==WL_CONNECTED)
-                {
-                  online=1;
-                  Serial.print(F("Connected to "));
-                  Serial.println(this_ssid);
+  Serial.println("Trying to connect to " PREFERRED_INFRASTRUCTURE_SSID);
+  WiFi.begin(PREFERRED_INFRASTRUCTURE_SSID);
+  if(WiFi.waitForConnectResult() == WL_CONNECTED) {
+    online = 1;
+    Serial.println("Connected to " PREFERRED_INFRASTRUCTURE_SSID "!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  }
+  else {
+    Serial.println("Couldn't find " PREFERRED_INFRASTRUCTURE_SSID "!");
+  }
 
-                  Serial.print(F("IP address: "));
-                  Serial.println(WiFi.localIP());
-                  break; // break out of the for loop
-                }
-              else
-                {
-                  Serial.print(F("Could not connect to "));
-                  Serial.println(this_ssid);
-                }
-            }
-          else
-            {
-              Serial.print(F("I don't care about "));
-              Serial.println(WiFi.SSID(i));
-            }
-          delay(10);
-        }
-    }
-
-  if(!online) // screw it, I'll make my own AP!
-    {
-      String postfix = WiFi.macAddress();
-      //Serial.println(postfix);
-      //Serial.println(postfix.substring(9,17));
-
-      char macaddr[60];
-      ("-"+WiFi.macAddress().substring(9,17)).toCharArray(macaddr,60);
-      WiFi.softAP(strcat(ssid,macaddr));
-
-      if(1) // best check ever
-        {
+  if(WiFi.status() != WL_CONNECTED) { // uh oh .. BadgerNet isn't there, is someone else running one?
+    Serial.println(F("Looking for more badgers.."));
+    int n = WiFi.scanNetworks();
+    for (int i = 0; i < n; ++i) {
+      String ssid = WiFi.SSID(i);
+      if(ssid.startsWith(WIFI_HOTSPOT_BASENAME)) {
+        Serial.print(F("Trying to connect to "));
+        Serial.println(ssid);
+        WiFi.begin(ssid.c_str());
+        if(WiFi.waitForConnectResult() == WL_CONNECTED) {
           online=1;
-          Serial.print(F("Fine, I'll make my own AP at "));
+          Serial.print(F("Connected to "));
           Serial.println(ssid);
-          Serial.print(F("AP IP address: "));
-          Serial.println(WiFi.softAPIP());
+
+          Serial.print(F("IP address: "));
+          Serial.println(WiFi.localIP());
+          break; // break out of the for loop
         }
-      else
-        {
-          Serial.println(F("Couldn't even set up my own network, what gives?"));
+        else {
+          Serial.print(F("Could not connect to "));
+          Serial.println(ssid);
         }
+      }
+      else {
+        Serial.print(F("I don't care about "));
+        Serial.println(ssid);
+      }
+      delay(10);
     }
+  }
+
+  if(!online) { // I'll make my own AP!
+    String ssid(WIFI_HOTSPOT_BASENAME "-");
+    ssid += macLastFour;
+
+    Serial.print(F("Fine, I'll make my own AP at "));
+    Serial.println(ssid);
+    WiFi.softAP(ssid.c_str());
+    online=1;
+    Serial.print(F("AP IP address: "));
+    Serial.println(WiFi.softAPIP());
+  }
+  else {
+    // MDNS only works when we are not the AP host
+    if (!MDNS.begin(myhostname.c_str())) {
+      Serial.println("Error setting up MDNS responder!");
+      Serial.println("I guess I'll need to be found by IP address.");
+    }
+  }
 }
 
 void handleFileUpload()
@@ -354,6 +344,13 @@ void handleFileUpload()
   yield();
 }
 
+void handleUpdate() {
+  server.sendHeader("Connection", "close");
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+  ESP.restart();  
+}
+
 void sendError(int code, const String& content) {
   server.send(code, "text/plain", content);  
 }
@@ -362,6 +359,7 @@ void setup()
 {
   delay(1000);
   Serial.begin(115200);
+  Serial.println();
   Serial.println();
 
   leds.setup();
@@ -376,18 +374,15 @@ void setup()
   server.on("/leds/", handleLeds);  
   server.on("/config", handleConfig);
 
-  server.on("/update", HTTP_POST, [](){
-      server.sendHeader("Connection", "close");
-      server.sendHeader("Access-Control-Allow-Origin", "*");
-      server.send(200, "text/plain", (Update.hasError())?"FAIL":"OK");
-      ESP.restart();
-    });
-
+  server.on("/update", HTTP_POST, handleUpdate);
   server.onFileUpload(handleFileUpload);
 
   server.begin();
 
   Serial.println(F("HTTP server started"));
+
+  // Add service to MDNS-SD
+  MDNS.addService("http", "tcp", 80);
 }
 
 void loop() {
