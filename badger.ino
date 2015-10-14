@@ -226,12 +226,16 @@ void handleConfig()
 }
 
 void setupWiFi() {
+  Serial.print("MAC address is ");
+  Serial.println(WiFi.macAddress());
+
   String macLastFour = WiFi.macAddress().substring(12,17);
   macLastFour.replace(":","");
   macLastFour.toLowerCase();
 
   myhostname = configSpace.name();
   Serial.print("name from config is ");
+  Serial.println(myhostname);
   if (myhostname.length() == 0 || (myhostname.length() == 1 && myhostname[0] == 0)) {
     myhostname = "badger";
     myhostname += "-";
@@ -256,37 +260,6 @@ void setupWiFi() {
     Serial.println("Couldn't find " PREFERRED_INFRASTRUCTURE_SSID "!");
   }
 
-  if(WiFi.status() != WL_CONNECTED) { // uh oh .. BadgerNet isn't there, is someone else running one?
-    Serial.println(F("Looking for more badgers.."));
-    int n = WiFi.scanNetworks();
-    for (int i = 0; i < n; ++i) {
-      String ssid = WiFi.SSID(i);
-      if(ssid.startsWith(WIFI_HOTSPOT_BASENAME)) {
-        Serial.print(F("Trying to connect to "));
-        Serial.println(ssid);
-        WiFi.begin(ssid.c_str());
-        if(WiFi.waitForConnectResult() == WL_CONNECTED) {
-          online=1;
-          Serial.print(F("Connected to "));
-          Serial.println(ssid);
-
-          Serial.print(F("IP address: "));
-          Serial.println(WiFi.localIP());
-          break; // break out of the for loop
-        }
-        else {
-          Serial.print(F("Could not connect to "));
-          Serial.println(ssid);
-        }
-      }
-      else {
-        Serial.print(F("I don't care about "));
-        Serial.println(ssid);
-      }
-      delay(10);
-    }
-  }
-
   if(!online) { // I'll make my own AP!
     String ssid(WIFI_HOTSPOT_BASENAME "-");
     ssid += macLastFour;
@@ -300,6 +273,9 @@ void setupWiFi() {
   }
   else {
     // MDNS only works when we are not the AP host
+
+    // Add service to MDNS-SD
+    MDNS.addService("http", "tcp", 80);
     if (!MDNS.begin(myhostname.c_str())) {
       Serial.println("Error setting up MDNS responder!");
       Serial.println("I guess I'll need to be found by IP address.");
@@ -348,7 +324,7 @@ void handleUpdate() {
   server.sendHeader("Connection", "close");
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-  ESP.restart();  
+  ESP.restart();
 }
 
 void sendError(int code, const String& content) {
@@ -380,9 +356,6 @@ void setup()
   server.begin();
 
   Serial.println(F("HTTP server started"));
-
-  // Add service to MDNS-SD
-  MDNS.addService("http", "tcp", 80);
 }
 
 void loop() {
