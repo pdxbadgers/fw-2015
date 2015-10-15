@@ -4,6 +4,16 @@
 #include <stdint.h>
 #include <Ticker.h>
 
+// Color constants in the form needed to fill in parameters to setColor() method
+#define COLOR_RANDOM  0x00, 0x00, 0x00
+#define COLOR_RED     0xff, 0x00, 0x00
+#define COLOR_ORANGE  0xff, 0x8c, 0x00
+#define COLOR_YELLOW  0xff, 0xff, 0x00
+#define COLOR_GREEN   0x00, 0xff, 0x00
+#define COLOR_BLUE    0x00, 0x00, 0xff
+#define COLOR_PURPLE  0x80, 0x00, 0x80
+#define COLOR_WHITE   0xff, 0xff, 0xff
+
 class LED {
 public:
   LED();

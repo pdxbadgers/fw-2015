@@ -255,6 +255,9 @@ void setupWiFi() {
     Serial.println("Connected to " PREFERRED_INFRASTRUCTURE_SSID "!");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+
+    // Set external indicator that we're in config mode
+    eyeLED.setColor(COLOR_GREEN);
   }
   else {
     Serial.println("Couldn't find " PREFERRED_INFRASTRUCTURE_SSID "!");
@@ -270,6 +273,9 @@ void setupWiFi() {
     online=1;
     Serial.print(F("AP IP address: "));
     Serial.println(WiFi.softAPIP());
+
+    // Set external indicator that we're in config mode
+    eyeLED.setColor(COLOR_YELLOW);
   }
   else {
     // MDNS only works when we are not the AP host
