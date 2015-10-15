@@ -67,6 +67,7 @@ LEDGroup leds(_led_array, NUM_LEDS, [](){ leds.modeStep(); });
 /* Set these to your desired credentials. */
 #define PREFERRED_INFRASTRUCTURE_SSID "BadgerNet"
 #define WIFI_HOTSPOT_BASENAME         "BadgerNet"
+#define WIFI_CONNECT_RETRIES          4
 
 String myhostname = "none";
 ESP8266WebServer server(80);
@@ -249,8 +250,23 @@ void setupWiFi() {
   bool online=0;
 
   Serial.println("Trying to connect to " PREFERRED_INFRASTRUCTURE_SSID);
+  leds.setAllState(false);
   WiFi.begin(PREFERRED_INFRASTRUCTURE_SSID);
-  if(WiFi.waitForConnectResult() == WL_CONNECTED) {
+  int result = WL_DISCONNECTED;
+  for (int i = 0; i < WIFI_CONNECT_RETRIES && result != WL_CONNECTED; i++) {
+    Serial.print("Attempt ");
+    Serial.print(i + 1);
+    Serial.print(" of ");
+    Serial.println(WIFI_CONNECT_RETRIES);
+    leds[i]->setState(true);
+
+    result = WiFi.waitForConnectResult();
+    if (result != WL_CONNECTED) {
+      delay(500);
+    }
+  }
+  leds.setAllState(false);
+  if(result == WL_CONNECTED) {
     online = 1;
     Serial.println("Connected to " PREFERRED_INFRASTRUCTURE_SSID "!");
     Serial.print("IP address: ");
@@ -258,6 +274,7 @@ void setupWiFi() {
 
     // Set external indicator that we're in config mode
     eyeLED.setColor(COLOR_GREEN);
+    eyeLED.setState(true);
   }
   else {
     Serial.println("Couldn't find " PREFERRED_INFRASTRUCTURE_SSID "!");
@@ -275,7 +292,8 @@ void setupWiFi() {
     Serial.println(WiFi.softAPIP());
 
     // Set external indicator that we're in config mode
-    eyeLED.setColor(COLOR_YELLOW);
+    eyeLED.setColor(COLOR_RED);
+    eyeLED.setState(true);
   }
   else {
     // MDNS only works when we are not the AP host
@@ -287,6 +305,11 @@ void setupWiFi() {
       Serial.println("I guess I'll need to be found by IP address.");
     }
   }
+
+  // Wait a few seconds and turn off the light, because it's really bright
+  delay(3000);
+  leds.setAllState(false);
+  eyeLED.setColor(COLOR_RANDOM);
 }
 
 void handleFileUpload()
