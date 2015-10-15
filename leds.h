@@ -74,6 +74,7 @@ public:
     BLINK = 1,
     CHASE = 2,
     TWINKLE = 3,
+    ALL = 4,
     NUM_MODES
   };
 
@@ -85,7 +86,7 @@ public:
   
 private:
   // must stay in sync with 'modes' enum
-  static const char* _modeStrings[4];
+  static const char* _modeStrings[5];
 
   const char* getModeString(modes m);
 

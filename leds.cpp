@@ -173,6 +173,10 @@ boolean LEDGroup::setMode(String mode) {
       _modeTicker.detach();
       setAllState(false);
       break;
+    case ALL:
+      // Stop the ticker and turn on all LEDs
+      _modeTicker.detach();
+      setAllState(true);
     case BLINK:
       _modeFlashState = false;
       _modeTicker.attach_ms(500, _modeStepper);
@@ -244,11 +248,12 @@ LED* LEDGroup::operator[](int index) {
 }
 
 // must stay in sync with 'modes' enum
-const char* LEDGroup::_modeStrings[4] = {
+const char* LEDGroup::_modeStrings[5] = {
   "none",
   "blink",
   "chase",
-  "twinkle"  
+  "twinkle",
+  "all"
 };
 
 const char* LEDGroup::getModeString(modes m) {
