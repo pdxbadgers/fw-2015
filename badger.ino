@@ -72,6 +72,9 @@ LEDGroup leds(_led_array, NUM_LEDS, [](){ leds.modeStep(); });
 String myhostname = "none";
 ESP8266WebServer server(80);
 
+#define DEFAULT_MODE_CHANGE_TIME  (20*1000)
+#define DEFAULT_MODE_PAUSE_TIME   (5*1000)
+
 String flag = "BADGERMASTER";
 
 const char* serverIndex = "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
@@ -86,9 +89,39 @@ void handleRoot()
 void handleFlag() {
   if(server.hasArg("newflag")) {
     flag = server.arg("newflag");
+
+    // Put the badger in notification mode that a flag has been planted
+    defaultModePause();
+    leds[4]->setColor(0, 0, 0);
+    leds[4]->setState(true);
   }
 
   server.send(200, "text/html", flag);
+}
+
+Ticker defaultModeTicker;
+boolean defaultModePaused = false;
+
+void defaultModeStart() {
+  Serial.println("defaultModeStart");
+  defaultModePaused = false;
+  leds.setMode((random(0,1) == 0) ? "chase" : "twinkle");
+
+  defaultModeTicker.once_ms(DEFAULT_MODE_CHANGE_TIME, defaultModeStart);
+}
+
+void defaultModePause() {
+  Serial.println("defaultModePause");
+  if (!defaultModePaused) {
+    leds.setMode("none");
+  }
+  defaultModePaused = true;
+  defaultModeTicker.once_ms(DEFAULT_MODE_PAUSE_TIME, defaultModeStart);
+}
+
+void defaultModeStop() {
+  Serial.println("defaultModeStop");
+  defaultModeTicker.detach();
 }
 
 // GET /leds -> JSON describing LED set
@@ -125,6 +158,8 @@ void handleLeds() {
       sendError(400, "setting mode has no additional parameters");
       return;      
     }
+
+    defaultModeStop();
 
     if (!leds.setMode(server.arg("m"))) {
       sendError(400, "unknown mode");
@@ -177,6 +212,8 @@ void handleLeds() {
       sendError(400, "unknown params");
       return;
     }
+
+    defaultModeStop();
 
     if (setRgb && !leds[ledID]->setColor(newRed, newGreen, newBlue)) {
       Serial.println("error setting color");
@@ -235,6 +272,11 @@ void setupWiFi() {
   macLastFour.toLowerCase();
 
   myhostname = configSpace.name();
+  if (myhostname[0] == 0xff) { // this is what EEPROM API returns if not initialized
+    Serial.print("Found uninitialized config! Setting default");
+    myhostname = "";
+    configSpace.setName(myhostname);
+  }
   Serial.print("name from config is ");
   Serial.println(myhostname);
   if (myhostname.length() == 0 || (myhostname.length() == 1 && myhostname[0] == 0)) {
@@ -383,8 +425,9 @@ void setup()
   server.onFileUpload(handleFileUpload);
 
   server.begin();
-
   Serial.println(F("HTTP server started"));
+
+  defaultModeStart();
 }
 
 void loop() {
