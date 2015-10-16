@@ -140,7 +140,7 @@ void LEDGroup::setup() {
 String LEDGroup::getGroupInfo() {
   String rv("{\"count\":");
   rv += String(size());
-  rv += ",\"mode\":\"";
+  rv += ",\"m\":\"";
   rv += getModeString(_mode);
   rv += "\"}";
   return rv;
