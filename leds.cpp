@@ -41,11 +41,11 @@ void MonochromeLED::setState(boolean state) {
 }
 
 String MonochromeLED::getLedInfo(int index) {
-  String rv("{\"id\":");
+  String rv("{\"d\":");
   rv += String(index);
-  rv += ",\"isRgb\":false,\"state\":";
+  rv += ",\"isRgb\":false,\"s\":\"";
   rv += (_state) ? "on" : "off";
-  rv += "}";
+  rv += "\"}";
   return rv;
 }
 
@@ -108,11 +108,11 @@ boolean RgbLED::setColor(int red, int green, int blue) {
 }
 
 String RgbLED::getLedInfo(int index) {
-  String rv("{\"id\":");
+  String rv("{\"d\":");
   rv += String(index);
-  rv += ",\"isRgb\":true,\"state\":";
+  rv += ",\"isRgb\":true,\"s\":\"";
   rv += (_state) ? "on" : "off";
-  rv += ",\"r\":";
+  rv += "\",\"r\":";
   rv += String(_red);
   rv += ",\"g\":";
   rv += String(_green);

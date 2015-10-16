@@ -60,13 +60,13 @@ String ConfigSpace::name()
   if (!initialized) {
     return ret;
   }
-  ret.reserve(nameLen() + 1);
+  ret.reserve(nameLen());
   for (int i = NAME_ADDR; i < CONFIG_SIZE; i++) {
     const char c = EEPROM.read(i);
-    ret += c;
     if (c == 0) {
       break;
     }
+    ret += c;
   }
   return ret;
 }

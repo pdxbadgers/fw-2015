@@ -114,11 +114,11 @@ void handleLeds() {
       return;
     }
 
-    server.send(200, "text/json", leds.getGroupEnumeration());    
+    server.send(200, "text/html", leds.getGroupEnumeration());
   }
   else if (server.args() == 0) {
     //LEDs collection info
-    server.send(200, "text/json", leds.getGroupInfo());
+    server.send(200, "text/html", leds.getGroupInfo());
   }
   else if (server.hasArg("m")) {
     if (server.args() > 1) {
@@ -131,7 +131,7 @@ void handleLeds() {
       return;
     }
 
-    server.send(200, "text/json", leds.getGroupInfo());    
+    server.send(200, "text/html", leds.getGroupInfo());
   }
   else if (server.hasArg("d")) {
     Serial.println("d=");
@@ -186,7 +186,7 @@ void handleLeds() {
     if (setNewState) {
       leds[ledID]->setState(newState);
     }
-    server.send(200, "text/json", leds.getLedInfo(ledID));
+    server.send(200, "text/html", leds.getLedInfo(ledID));
   }
   else {
     Serial.println("unknown led action");
