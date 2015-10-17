@@ -84,6 +84,7 @@ const char serverIndex[] = "<html><head><style>body {text-align:center;} h2 {bor
                                    "<div><a href='/leds?m=none'>Off</a></div>"
                                    "<div><a href='/leds?m=all'>All On</a></div>"
                                    "<div><a href='/leds?m=twinkle'>Random</a></div>"
+                                   "<br><div><div><form action='flag'><input type='text' name='newflag' value='"+flag+"'><input type='submit' value='set flag'></form></div>"
                                  "</div>"
                                  "<div class='footer'>See <a href='https://github.com/pdxbadgers/fw-2015'>GitHub</a> for all features.</div>"
                            "</body></html>";
