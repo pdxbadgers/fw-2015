@@ -80,12 +80,12 @@ String flag = "BADGERMASTER";
 const char serverIndex[] = "<html><head><style>body {text-align:center;} h2 {border-style: solid none;} .footer {background-color:orange;}</style>"
                                        "<title>BSides PDX 2015 Badger</title><head>"
                                  "<body><h2>BSides PDX 2015 Badger</h2>"
-                                 "<div class=\"buttons\">"
-                                   "<div><a href=\"/leds?m=none\">Off</a></div>"
-                                   "<div><a href=\"/leds?m=all\">All On</a></div>"
-                                   "<div><a href=\"/leds?m=twinkle\">Random</a></div>"
+                                 "<div class='buttons'>"
+                                   "<div><a href='/leds?m=none'>Off</a></div>"
+                                   "<div><a href='/leds?m=all'>All On</a></div>"
+                                   "<div><a href='/leds?m=twinkle'>Random</a></div>"
                                  "</div>"
-                                 "<div class=\"footer\">See <a href=\"https://github.com/pdxbadgers/fw-2015\">GitHub</a> for all features.</div>"
+                                 "<div class='footer'>See <a href='https://github.com/pdxbadgers/fw-2015'>GitHub</a> for all features.</div>"
                            "</body></html>";
 
 void handleRoot()
