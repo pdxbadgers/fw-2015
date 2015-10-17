@@ -162,7 +162,7 @@ String LEDGroup::getLedInfo(int id) {
   return _leds[id]->getLedInfo(id);  
 }
 
-boolean LEDGroup::setMode(String mode) {
+boolean LEDGroup::setMode(const String& mode) {
   modes newMode = getModeFromString(mode);
   if (newMode != NUM_MODES) {
     _mode = newMode;

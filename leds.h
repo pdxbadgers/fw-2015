@@ -78,7 +78,7 @@ public:
     NUM_MODES
   };
 
-  boolean setMode(String mode);
+  boolean setMode(const String& mode);
   void modeStep();
   void setAllState(boolean state);
   int size();
